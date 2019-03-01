@@ -58,9 +58,10 @@
         this.$.menuItemRefresh.addEventListener('click', this.menuItemRefreshClick.bind(this));
         this.$.menuItemNetworkTable.addEventListener('click', this.menuItemNetworkTableClick.bind(this));
         this.$.menuItemPermitJoin.addEventListener('click', this.menuItemPermitJoinClick.bind(this));
-        
+                
         this.initNetworkGraph();   
-        this.refreshData();     
+        this.refreshData();  
+           
       }
 
       menuItemRefreshClick() {
@@ -122,7 +123,7 @@
         for (let state in this.hass.states) {
           if (state.indexOf('zigate.') === 0)// && state !== 'zigate.zigate')
             zigateDevicesStates.push(this.hass.states[state]);
-        }
+        }        
 
         zigateDevicesStates.forEach(function (entity) {
           let entityAddr = entity.attributes.addr;
@@ -145,11 +146,18 @@
           }
   
           this._nodesDataset.add(node);
-        }.bind(this));
+        }.bind(this));       
 
-        
+        var sameLinks = [];
 
         myzigate.attributes.network_table.forEach(function (link) {
+          //count links on same objects to avoid overlapping edge labels
+          var sameLinkKey = [link[0], link[1]].sort().join()
+          if(typeof(sameLinks[sameLinkKey]) === 'undefined')
+            sameLinks[sameLinkKey] = 1;
+          else 
+            sameLinks[sameLinkKey]++;
+
           if (link[0] != link[1]) {
             let edge = {
               from: link[0],
@@ -157,18 +165,21 @@
               value: link[2],
               title: 'lqi: ' + link[2].toString(),
               label: link[2].toString(),
-              scaling: { label: false, max: 10 }
+              scaling: { label: false, max: 10 },
+              smooth: sameLinks[sameLinkKey] > 1
             };
             this._edgesDataset.add(edge);
           }
         }.bind(this));
+
+        console.dir(sameLinks);
 
         this._edgesDataset.flush(); 
         this._nodesDataset.flush();
           
 
         if(typeof(this._networkGraph) !== 'undefined')
-          this._networkGraph.stabilize(5000);     
+          this._networkGraph.stabilize();     
       }
     }
 
