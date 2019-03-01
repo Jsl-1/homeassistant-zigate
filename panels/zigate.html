@@ -1,6 +1,7 @@
 <dom-module id='ha-panel-zigate'>
     <template>
       <style include="ha-style">
+        #zigatenetworkmap { height: calc(100vh - 64px); width: 100%; }
       </style>
       <app-header-layout has-scrolling-region>
         <app-header slot="header" fixed>
@@ -49,6 +50,7 @@
 
       ready() {
         super.ready();
+
         let dataSetOptions = { queue: true };
         this._nodesDataset = new vis.DataSet([], dataSetOptions);
         this._edgesDataset = new vis.DataSet([], dataSetOptions);
@@ -56,9 +58,9 @@
         this.$.menuItemRefresh.addEventListener('click', this.menuItemRefreshClick.bind(this));
         this.$.menuItemNetworkTable.addEventListener('click', this.menuItemNetworkTableClick.bind(this));
         this.$.menuItemPermitJoin.addEventListener('click', this.menuItemPermitJoinClick.bind(this));
-       
-        this.refreshData();
-        this.initNetworkGraph();        
+        
+        this.initNetworkGraph();   
+        this.refreshData();     
       }
 
       menuItemRefreshClick() {
@@ -75,32 +77,38 @@
         this.hass.callService('zigate', 'permit_join', {});          
       }
 
+
       initNetworkGraph() {
-        var container = this.$.zigatenetworkmap;
-        var data = {
+        let container = this.$.zigatenetworkmap;
+        let data = {
           nodes: this._nodesDataset,
           edges: this._edgesDataset
         }
-        var options = {
-          physics:{
-            barnesHut:{gravitationalConstant:-1500},
-          },
+
+        
+        let options = {
+          physics: false,
           autoResize: true,
-          width: '1024px',
-          height: '768px',
+          width: '100%',
+          height: '100%',
           nodes: {
             shape: 'box'
           },
+          edges: {
+            smooth: false
+          },
           layout: {
             randomSeed: 0,
-            hierarchical: {
-              enabled: false
-            }
           },
           interaction: {
             hover: true,
           }
         };
+
+        let customPanelOptions = this.panel.config['graph'];
+        if(typeof(panelOptions) === 'Object')
+          options = Object.apply(defaultOptions, customPanelOptions);
+
         this._networkGraph = new vis.Network(container, data, options);
       }
 
@@ -108,9 +116,11 @@
         this._edgesDataset.clear();
         this._nodesDataset.clear();
 
+        var myzigate = this.hass.states['zigate.zigate'];
         let zigateDevicesStates = new Array();
+
         for (let state in this.hass.states) {
-          if (state.indexOf('zigate.') === 0)
+          if (state.indexOf('zigate.') === 0)// && state !== 'zigate.zigate')
             zigateDevicesStates.push(this.hass.states[state]);
         }
 
@@ -123,11 +133,11 @@
             , title: '<strong>' + entity.attributes.friendly_name
               + '</strong><br>IEEE : ' + entity.attributes.ieee
               + '</strong><br>ADDR : ' + entity.attributes.addr
+            , value: 5
           };
 
           if (entityAddr === '0000') {
             node.shape = 'ellipse';
-            node.mass = 10;
           }
 
           if (entityMissing === true) {
@@ -137,7 +147,7 @@
           this._nodesDataset.add(node);
         }.bind(this));
 
-        var myzigate = this.hass.states['zigate.zigate'];
+        
 
         myzigate.attributes.network_table.forEach(function (link) {
           if (link[0] != link[1]) {
@@ -153,8 +163,12 @@
           }
         }.bind(this));
 
+        this._edgesDataset.flush(); 
         this._nodesDataset.flush();
-        this._edgesDataset.flush();        
+          
+
+        if(typeof(this._networkGraph) !== 'undefined')
+          this._networkGraph.stabilize(5000);     
       }
     }
 
