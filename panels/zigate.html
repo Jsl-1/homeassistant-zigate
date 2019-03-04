@@ -14,6 +14,8 @@
                 <paper-item id="menuItemRefresh">Update Graph</paper-item>
                 <paper-item id="menuItemNetworkTable">Generate network table</paper-item>
                 <paper-item id="menuItemPermitJoin">Permit Join</paper-item>
+                <paper-divider></paper-divider>
+                <paper-item id="menuItemConfigureNetwork">Configurator</paper-item>
               </paper-listbox>
             </paper-menu-button>
           </app-toolbar>
@@ -24,6 +26,7 @@
     </template>
   </dom-module>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis-network.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.min.js"></script>
   <script>
     class HaPanelZiGate extends Polymer.Element {
       static get is() { return 'ha-panel-zigate'; }
@@ -59,11 +62,142 @@
         this.$.menuItemRefresh.addEventListener('click', this.menuItemRefreshClick.bind(this));
         this.$.menuItemNetworkTable.addEventListener('click', this.menuItemNetworkTableClick.bind(this));
         this.$.menuItemPermitJoin.addEventListener('click', this.menuItemPermitJoinClick.bind(this));
+        this.$.menuItemConfigureNetwork.addEventListener('click', this.menuItemConfigureNetwork.bind(this));
         
-        this.initGraphOptions();
+        this.initNetworkOptions();
         this.initNetworkGraph();   
         this.refreshData();  
            
+      }
+
+      initNetworkOptions(){
+      	
+        this._networkOptions = {
+          physics: true,
+          autoResize: true,
+          width: '100%',
+          height: '100%',
+          nodes: {
+            shape: 'box'
+          },
+          edges: {
+            smooth: false
+            ,scaling: { label: false, max: 10 }
+          },
+          layout: {
+            randomSeed: 0,
+          },
+          interaction: {
+            hover: true,
+          }
+        };
+        
+        this._nodeCustomizations = {
+        	    'zigate': {
+        	        shape: 'ellipse'
+        	        ,x: 0
+        	        ,y: 0        	    	
+        	    },
+        	    'missing' : {
+        	    	  color: 'red'
+        	    },
+              'nolinks' : {
+                  color: 'orange'
+              }
+        };
+
+        //override configuration from panel_custom configuration
+        let networkOptions = this.panel.config['network'];
+        if(typeof(networkOptions) === 'object')
+          this._networkOptions = _.merge(this._networkOptions, networkOptions);
+        
+        let nodeCustomizations = this.panel.config['nodes'];
+        if(typeof(nodeCustomizations) === 'object')
+          this._nodeCustomizations = _.merge(this._nodeCustomizations, nodeCustomizations)
+      }
+
+      initNetworkGraph() {
+        let container = this.$.zigatenetworkmap;
+        let data = {
+          nodes: this._nodesDataset,
+          edges: this._edgesDataset
+        }
+        this._networkGraph = new vis.Network(container, data, this._networkOptions);
+        this._networkGraph.on('stabilized', function () {
+            //disable physics after stabilisation, allow user to move nodes
+            this._networkGraph.setOptions( { physics: false } );
+        }.bind(this));
+      }
+
+      refreshData() {
+        this._edgesDataset.clear();
+        this._nodesDataset.clear();
+
+        let myzigate = this.hass.states['zigate.zigate'];
+        let zigateDevicesStates = new Array();
+        let addrToIeeeTable = new Array();
+
+        for (let state in this.hass.states) {
+          if (state.indexOf('zigate.') === 0)
+            zigateDevicesStates.push(this.hass.states[state]); 
+        }        
+
+        zigateDevicesStates.forEach(function (entity) {
+        	  let entityIeee = entity.attributes.ieee;
+          let entityAddr = entity.attributes.addr;
+          let entityMissing = entity.attributes.missing;
+          
+          addrToIeeeTable[entityAddr] = entityIeee;
+          
+          let node = {
+            id: entityIeee 
+            , label: entity.attributes.friendly_name
+            , title: '<strong>' + entity.attributes.friendly_name
+              + '</strong><br>IEEE : ' + entity.attributes.ieee
+              + '</strong><br>ADDR : ' + entity.attributes.addr
+              + '</strong><br>LQI : ' + (entity.attributes.lqi | 0)
+          };
+
+          if (entityAddr === '0000') {
+          	 node = _.merge(node, this._nodeCustomizations.zigate);
+          }
+
+          if (entityMissing === true) {
+          	 node = _.merge(node, this._nodeCustomizations.missing);
+          }
+  
+          this._nodesDataset.add(node);
+        }.bind(this));       
+
+        var duplicates = [];
+
+        myzigate.attributes.network_table.forEach(function (link) {
+          //count duplicate links to avoid overlapping edge labels
+          var duplicatesKey = [link[0], link[1]].sort().join()
+          if(typeof(duplicates[duplicatesKey]) === 'undefined')
+            duplicates[duplicatesKey] = 1;
+          else 
+            duplicates[duplicatesKey]++;
+
+          if (link[0] != link[1]) {
+            let edge = {
+              from: addrToIeeeTable[link[0]] 
+              ,to: addrToIeeeTable[link[1]]
+              ,value: link[2]
+              ,title: 'lqi: ' + link[2].toString()
+              ,label: link[2].toString()
+            };
+            if(duplicates[duplicatesKey] > 1)
+              edge.smooth = true;
+            
+            this._edgesDataset.add(edge);
+          }
+        }.bind(this));
+
+        //this._networkGraph.setOptions({ physics: { enabled: true} });
+        this._edgesDataset.flush(); 
+        this._nodesDataset.flush();
+        this._networkGraph.stabilize();     
       }
 
       menuItemRefreshClick() {
@@ -80,129 +214,10 @@
         this.hass.callService('zigate', 'permit_join', {});          
       }
 
-      initGraphOptions(){
-        this._graphOptions = {
-          physics: false,
-          autoResize: true,
-          width: '100%',
-          height: '100%',
-          nodes: {
-            shape: 'box'
-          },
-          edges: {
-            smooth: false
-            ,scaling: { label: false, max: 10 }
-           // smooth: { enabled: true, type: 'dynamic'}
-          },
-          layout: {
-            randomSeed: 0,
-          },
-          interaction: {
-            hover: true,
-          }
-        };
-        
-        this._zigateNodeOptions = {
-        	  shape: 'ellipse'
-        };
-        
-        this._missingNodeOptions = {
-        	  color: 'red'
-        };
-
-        let customGraphOptions = this.panel.config['graph'];
-        if(typeof(customGraphOptions) === 'Object')
-          this._graphOptions = Object.assign(this._graphOptions, customGraphOptions);
-
-	       let customZigatenodeOptions = this.panel.config['zigatenode'];
-        if(typeof(customZigatenodeOptions) === 'Object')
-          this._zigateNodeOptions = Object.assign(this._zigateNodeOptions, customZigatenodeOptions);
-     
-        let customMissingNodeOptions = this.panel.config['missing'];
-        if(typeof(customMissingNodeOptions) === 'Object')
-          this._missingNodeOptions = Object.assign(this._missingNodeOptions, customMissingNodeOptions);
-
-      }
-
-      initNetworkGraph() {
-        let container = this.$.zigatenetworkmap;
-        let data = {
-          nodes: this._nodesDataset,
-          edges: this._edgesDataset
-        }
-        this._networkGraph = new vis.Network(container, data, this._graphOptions);
-        this._networkGraph.on('stabilized', function () {
-            this._networkGraph.setOptions( { physics: false } );
-        }.bind(this));
-      }
-
-      refreshData() {
-        this._edgesDataset.clear();
-        this._nodesDataset.clear();
-
-        let myzigate = this.hass.states['zigate.zigate'];
-        let zigateDevicesStates = new Array();
-
-        for (let state in this.hass.states) {
-          if (state.indexOf('zigate.') === 0)
-            zigateDevicesStates.push(this.hass.states[state]);
-        }        
-
-        zigateDevicesStates.forEach(function (entity) {
-          let entityAddr = entity.attributes.addr;
-          let entityMissing = entity.attributes.missing;
-          let node = {
-            id: entity.attributes.addr
-            , label: entity.attributes.friendly_name
-            , title: '<strong>' + entity.attributes.friendly_name
-              + '</strong><br>IEEE : ' + entity.attributes.ieee
-              + '</strong><br>ADDR : ' + entity.attributes.addr
-            , value: 5
-          };
-
-          if (entityAddr === '0000') {
-          	 node = Object.assign(node, this._zigateNodeOptions);
-          }
-
-          if (entityMissing === true) {
-          	 node = Object.assign(node, this._missingNodeOptions);
-          }
-  
-          this._nodesDataset.add(node);
-        }.bind(this));       
-
-        var sameLinks = [];
-
-        myzigate.attributes.network_table.forEach(function (link) {
-          //count links on same objects to avoid overlapping edge labels
-          var sameLinkKey = [link[0], link[1]].sort().join()
-          if(typeof(sameLinks[sameLinkKey]) === 'undefined')
-            sameLinks[sameLinkKey] = 1;
-          else 
-            sameLinks[sameLinkKey]++;
-
-          if (link[0] != link[1]) {
-            let edge = {
-              from: link[0]
-              ,to: link[1]
-              ,value: link[2]
-              ,title: 'lqi: ' + link[2].toString()
-              ,label: link[2].toString()
-             // ,smooth: { enabled: sameLinks[sameLinkKey] > 1, type: 'dynamic' }
-            };
-            this._edgesDataset.add(edge);
-          }
-        }.bind(this));
-
-        console.dir(sameLinks);
-
-        this._networkGraph.setOptions({ physics: { enabled: true} });
-        this._edgesDataset.flush(); 
-        this._nodesDataset.flush();
-          
-
-     //   if(typeof(this._networkGraph) !== 'undefined')
-          this._networkGraph.stabilize();     
+      menuItemConfigureNetwork() {
+        this._networkGraph.setOptions({ 
+          configure : { showButton : true }
+        });
       }
     }
 
