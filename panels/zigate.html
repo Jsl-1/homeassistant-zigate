@@ -83,6 +83,7 @@
           edges: {
             smooth: false
             ,scaling: { label: false, max: 10 }
+            ,font: {align: 'top', vadjust: 2}
           },
           layout: {
             randomSeed: 0,
@@ -178,8 +179,8 @@
         }.bind(this));       
 
         var duplicates = [];
-
-        myzigate.attributes.network_table.forEach(function (link) {
+        var links = myzigate.attributes.network_table.sort((a,b) => a[2]>b[2] ? -1 : 0);
+        links.forEach(function (link) {
           //count duplicate links to avoid overlapping edge labels
           var duplicatesKey = [link[0], link[1]].sort().join()
           if(typeof(duplicates[duplicatesKey]) === 'undefined')
@@ -195,8 +196,11 @@
               ,title: 'lqi: ' + link[2].toString()
               ,label: link[2].toString()
             };
-            if(duplicates[duplicatesKey] > 1)
-              edge.smooth = true;
+            if(duplicates[duplicatesKey] > 1){
+              //edge.smooth = true;
+              edge.font = {align : 'bottom', vadjust:-2};
+              edge.color = {color : 'gray', opacity: 0.3 };
+            }
             
             this._edgesDataset.add(edge);
           }
