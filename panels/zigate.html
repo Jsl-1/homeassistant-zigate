@@ -15,7 +15,7 @@
                 <paper-item id="menuItemNetworkTable">Generate network table</paper-item>
                 <paper-item id="menuItemPermitJoin">Permit Join</paper-item>
                 <paper-divider></paper-divider>
-                <paper-item id="menuItemConfigureNetwork">Configurator</paper-item>
+                <paper-item id="menuItemConfigureNetwork">Graph settings builder</paper-item>
               </paper-listbox>
             </paper-menu-button>
           </app-toolbar>
@@ -86,6 +86,10 @@
           },
           layout: {
             randomSeed: 0,
+            hierarchical: {
+              enabled: false,
+              sortMethod: 'directed'
+            }
           },
           interaction: {
             hover: true,
@@ -143,7 +147,7 @@
         }        
 
         zigateDevicesStates.forEach(function (entity) {
-        	  let entityIeee = entity.attributes.ieee;
+        	let entityIeee = entity.attributes.ieee;
           let entityAddr = entity.attributes.addr;
           let entityMissing = entity.attributes.missing;
           
@@ -164,6 +168,10 @@
 
           if (entityMissing === true) {
           	 node = _.merge(node, this._nodeCustomizations.missing);
+          }
+
+          if(typeof(this._nodeCustomizations[entityIeee]) === 'object'){
+            node = _.merge(node, this._nodeCustomizations[entityIeee]);
           }
   
           this._nodesDataset.add(node);
