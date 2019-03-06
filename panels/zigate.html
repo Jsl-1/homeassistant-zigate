@@ -76,7 +76,8 @@
           physics: {
             enabled: true
             ,repulsion: { springLength: 200 }
-            ,barnesHut: { springLength: 200 }
+            ,barnesHut: { springLength: 200, gravitationalConstant: -30000, centralGravity: 0 }
+            ,solver: 'barnesHut'
           },
           autoResize: true,
           width: '100%',
@@ -110,9 +111,9 @@
           },
           'missing' : {
             color: { border: 'red', background:'#ffb3b3', hover: { border: 'red', background:'#ffeeee' } , highlight: { border: 'red', background:'#ffeeee' }}
-            // ,physics: {
-            //    barnesHut: { gravitationalConstant: -1000 }
-            // }
+            ,physics: false
+            ,x: -1000
+            ,y: -1000           
           }
         };
 
@@ -173,6 +174,7 @@
           //Use ieee as node Id
           let node = {
             id: entityIeee 
+            //, label: entity.entity_id
             , label: entity.attributes.friendly_name
             , title: '<strong>' + entity.attributes.friendly_name
               + '</strong><br>IEEE : ' + entity.attributes.ieee
