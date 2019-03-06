@@ -73,7 +73,11 @@
       initNetworkOptions(){
       	
         this._networkOptions = {
-          physics: true,
+          physics: {
+            enabled: true
+            ,repulsion: { springLength: 200 }
+            ,barnesHut: { springLength: 200, gravitationalConstant: -50000}
+          },
           autoResize: true,
           width: '100%',
           height: '100%',
