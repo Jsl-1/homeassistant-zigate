@@ -163,6 +163,7 @@
           
           addrToIeeeTable[entityAddr] = entityIeee;
           
+          //Use ieee as node Id
           let node = {
             id: entityIeee 
             , label: entity.attributes.friendly_name
@@ -207,6 +208,13 @@
             };
             if(duplicates[duplicatesKey] > 1){
               edge = _.merge(edge, this._edgeCustomizations['duplicated']);
+            }
+
+            //specific edge customizations
+            //id format should be ieee_ieee in panel.config.edges
+            let customizationEdgeId = edge.from + '_' + edge.to;
+            if(typeof(this._edgeCustomizations[customizationEdgeId] !== 'undefined')){
+              edge = _.merge(edge, this._edgeCustomizations[customizationEdgeId]);
             }
             
             this._edgesDataset.add(edge);
