@@ -76,7 +76,7 @@
           physics: {
             enabled: true
             ,repulsion: { springLength: 200 }
-            ,barnesHut: { springLength: 200, gravitationalConstant: -50000}
+            ,barnesHut: { springLength: 200 }
           },
           autoResize: true,
           width: '100%',
@@ -110,6 +110,9 @@
           },
           'missing' : {
             color: { border: 'red', background:'#ffb3b3', hover: { border: 'red', background:'#ffeeee' } , highlight: { border: 'red', background:'#ffeeee' }}
+            // ,physics: {
+            //    barnesHut: { gravitationalConstant: -1000 }
+            // }
           }
         };
 
