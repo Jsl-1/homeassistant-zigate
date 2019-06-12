@@ -1,0 +1,8 @@
+{
+  "domain": "zigate",
+  "name": "Zigate",
+  "documentation": "https://www.home-assistant.io/components/zigate",
+  "dependencies": ["persistent_notification"],
+  "codeowners": ["@doudz"],
+  "requirements": ["zigate==0.29.11"]
+}
