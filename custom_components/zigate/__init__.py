@@ -810,7 +810,7 @@ class ZiGateDeviceEntity(Entity):
     @property
     def should_poll(self):
         """No polling."""
-        return self._polling and self._device.receiver_on_when_idle()
+        return (self._polling or self._device.assumed_state) and self._device.receiver_on_when_idle()
 
     def update(self):
         self._device.refresh_device()
