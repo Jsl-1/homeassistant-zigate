@@ -9,7 +9,7 @@ from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS
 
 from homeassistant.components.climate import ClimateDevice, ENTITY_ID_FORMAT
 from homeassistant.components.climate.const import SUPPORT_TARGET_TEMPERATURE, SUPPORT_PRESET_MODE
-from . import DOMAIN as ZIGATE_DOMAIN
+from .const import DOMAIN as ZIGATE_DOMAIN
 from . import DATA_ZIGATE_ATTRS
 SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
 

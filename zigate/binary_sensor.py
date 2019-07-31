@@ -7,7 +7,7 @@ https://home-assistant.io/components/binary_sensor.zigate/
 import logging
 from homeassistant.components.binary_sensor import (BinarySensorDevice,
                                                     ENTITY_ID_FORMAT)
-from . import DOMAIN as ZIGATE_DOMAIN
+from .const import DOMAIN as ZIGATE_DOMAIN
 from . import DATA_ZIGATE_ATTRS
 
 _LOGGER = logging.getLogger(__name__)
